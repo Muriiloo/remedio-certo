@@ -1,17 +1,25 @@
+import { useAuth } from "@/hooks/useAuth";
 import { Ionicons } from "@expo/vector-icons";
+import { Redirect } from "expo-router";
 import { ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import NextMedicationCard from "../../components/next-medication-card";
 import "../../global.css";
 
 export default function Index() {
+  const { loggedUser } = useAuth();
+
+  if (!loggedUser) {
+    return <Redirect href="/sign-in" />;
+  }
+
   return (
     <SafeAreaView edges={["top"]} className="flex-1 bg-[#038bbb]">
       <View className="p-6">
         <View className="flex-row items-center justify-between">
           <View>
             <Text className="text-white text-4xl font-medium">
-              Olá Sr.José!
+              Olá {loggedUser.name}
             </Text>
             <Text className="text-white text-lg">
               Quinta-feira, 04 de Setembro.

@@ -34,7 +34,7 @@ export default function SignIn() {
       await signIn(name, password);
       router.replace("/");
     } catch (err) {
-      setError("E-mail ou senha inválidos.");
+      setError("Usuário ou senha inválidos.");
     } finally {
       setIsSubmitting(false);
     }
@@ -65,11 +65,10 @@ export default function SignIn() {
               <TextInput
                 value={name}
                 onChangeText={setName}
-                placeholder="seu@email.com"
+                placeholder="Digite seu usuário"
                 placeholderTextColor="#9ca3af"
                 autoCapitalize="none"
                 autoCorrect={false}
-                keyboardType="email-address"
                 className="rounded-xl border border-gray-300 px-4 py-3 text-base text-gray-900"
               />
             </View>
@@ -107,7 +106,7 @@ export default function SignIn() {
 
           <View className="mt-8 flex-row justify-center">
             <Text className="text-gray-500">Não tem uma conta? </Text>
-            <Pressable onPress={() => router.push("/(protected)")}>
+            <Pressable onPress={() => router.push("/sign-up")}>
               <Text className="font-semibold text-blue-600">Cadastre-se</Text>
             </Pressable>
           </View>
