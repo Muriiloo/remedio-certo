@@ -1,35 +1,14 @@
 import RegisterMedicationCard from "@/components/register-medication-card";
-import { useAuth } from "@/hooks/useAuth";
+import { useRemedies } from "@/hooks/useRemedies";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useFocusEffect } from "expo-router";
-import { useSQLiteContext } from "expo-sqlite";
 import { useCallback, useState } from "react";
 import { FlatList, Pressable, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-export type Remedy = {
-  id: number;
-  name: string;
-  quantity: number;
-  time_to_take: string;
-  person_id: number;
-};
-
 export default function Remedy() {
-  const [remedy, setRemedy] = useState<Remedy[]>([]);
-  const { loggedUser } = useAuth();
+  const { remedy, loadRemedies } = useRemedies()
   const [modalVisible, setModalVisible] = useState(false);
-  const db = useSQLiteContext();
-
-  const loadRemedies = useCallback(async () => {
-    if (!loggedUser) return;
-
-    const result = await db.getAllAsync<Remedy>(
-      "SELECT id, name, quantity, time_to_take FROM remedy WHERE person_id = ? ORDER BY time_to_take",
-      [loggedUser.id],
-    );
-    setRemedy(result);
-  }, [db, loggedUser]);
 
   useFocusEffect(
     useCallback(() => {
@@ -89,6 +68,7 @@ export default function Remedy() {
         </View>
       </SafeAreaView>
       <RegisterMedicationCard
+        onRemedyCreated={loadRemedies}
         onOpen={modalVisible}
         onClose={() => setModalVisible(false)}
       />

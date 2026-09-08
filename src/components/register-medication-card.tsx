@@ -15,11 +15,13 @@ import {
 interface RegisterMedicationCardProps {
   onClose: () => void;
   onOpen: boolean;
+  onRemedyCreated: () => Promise<void>
 }
 
 export default function RegisterMedicationCard({
   onClose,
   onOpen,
+  onRemedyCreated,
 }: RegisterMedicationCardProps) {
   const [name, setName] = useState("");
   const [quantity, setQuantity] = useState("");
@@ -39,6 +41,7 @@ export default function RegisterMedicationCard({
         "INSERT INTO remedy (name, quantity, time_to_take, person_id) VALUES (?, ?, ?, ?)",
         [name, quantity, timeToTake, loggedUser.id],
       );
+      await onRemedyCreated()
       onClose();
       setName("");
       setQuantity("");

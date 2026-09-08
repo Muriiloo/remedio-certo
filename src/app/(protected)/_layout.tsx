@@ -1,3 +1,4 @@
+import { RemedyProvider } from "@/contexts/remedyContext";
 import { useAuth } from "@/hooks/useAuth";
 import { Redirect } from "expo-router";
 import { NativeTabs } from "expo-router/unstable-native-tabs";
@@ -10,7 +11,8 @@ export default function ProtectedLayout() {
   }
 
   return (
-    <NativeTabs>
+    <RemedyProvider>
+      <NativeTabs>
       <NativeTabs.Trigger name="index">
         <NativeTabs.Trigger.Label>Início</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon sf="house.fill" md="home" />
@@ -20,5 +22,6 @@ export default function ProtectedLayout() {
         <NativeTabs.Trigger.Icon sf="pills.fill" md="medication" />
       </NativeTabs.Trigger>
     </NativeTabs>
+    </RemedyProvider>
   );
 }
