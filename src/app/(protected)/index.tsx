@@ -9,6 +9,15 @@ import "../../global.css";
 export default function Index() {
   const { loggedUser } = useAuth();
 
+  function formatDate(date: Date) {
+    return date.toLocaleDateString("pt-BR", {
+      weekday: "long",
+      day: "2-digit",
+      month: "long",
+      year: "numeric",
+    });
+  }
+
   if (!loggedUser) {
     return <Redirect href="/sign-in" />;
   }
@@ -21,9 +30,7 @@ export default function Index() {
             <Text className="text-white text-4xl font-medium">
               Olá {loggedUser.name}
             </Text>
-            <Text className="text-white text-lg">
-              Quinta-feira, 04 de Setembro.
-            </Text>
+            <Text className="text-white text-lg">{formatDate(new Date())}</Text>
           </View>
           <Ionicons name="person-circle-outline" size={60} color="white" />
         </View>
