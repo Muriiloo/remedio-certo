@@ -3,9 +3,11 @@ import { Pressable, Text, View } from "react-native";
 
 const NextMedicationCard = () => {
   return (
-    <View className="flex gap-4 m-8 bg-white py-6 px-4 rounded-xl">
+    <View className="flex gap-4 mx-8 my-4 bg-white py-6 px-4 rounded-xl">
       <View className="flex-row items-center justify-between gap-6 ">
-        <Text className="text-black font-medium text-2xl">Minha Próxima Medicação</Text>
+        <Text className="text-black font-medium text-2xl">
+          Minha Próxima Medicação
+        </Text>
         <Ionicons name="calendar" size={30} color="#038bbb" />
       </View>
       <View className="flex-row gap-4 ">
@@ -21,10 +23,12 @@ const NextMedicationCard = () => {
         </View>
       </View>
       <Pressable className="bg-emerald-500 p-4 rounded-full">
-        <Text className="text-white text-center font-bold text-xl">JÁ TOMEI!</Text>
+        <Text className="text-white text-center font-bold text-xl">
+          JÁ TOMEI!
+        </Text>
       </Pressable>
     </View>
   );
-}
+};
 
 export default NextMedicationCard;

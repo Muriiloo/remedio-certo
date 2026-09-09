@@ -15,7 +15,7 @@ import {
 interface RegisterMedicationCardProps {
   onClose: () => void;
   onOpen: boolean;
-  onRemedyCreated: () => Promise<void>
+  onRemedyCreated: () => Promise<void>;
 }
 
 export default function RegisterMedicationCard({
@@ -29,6 +29,9 @@ export default function RegisterMedicationCard({
   const { loggedUser } = useAuth();
   const db = useSQLiteContext();
 
+  const formattedTime = timeToTake.toString().slice(0, 5); // "08:30"
+  console.log("Formatted Time:", formattedTime); // Log the formatted time
+
   async function handleSave() {
     if (!loggedUser) return;
 
@@ -41,7 +44,7 @@ export default function RegisterMedicationCard({
         "INSERT INTO remedy (name, quantity, time_to_take, person_id) VALUES (?, ?, ?, ?)",
         [name, quantity, timeToTake, loggedUser.id],
       );
-      await onRemedyCreated()
+      await onRemedyCreated();
       onClose();
       setName("");
       setQuantity("");
@@ -134,7 +137,7 @@ export default function RegisterMedicationCard({
                   onChangeText={setTimeToTake}
                   placeholder="Ex: 08:30 ou 'Após o almoço...'"
                   placeholderTextColor="#9ca3af"
-                  keyboardType="default"
+                  keyboardType="numeric"
                   className="border border-gray-300 rounded-xl px-4 py-3.5 text-base text-gray-900"
                 />
               </View>

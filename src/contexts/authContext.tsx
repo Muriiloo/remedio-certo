@@ -64,7 +64,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
       );
 
       if (existing) {
-        throw new Error("Usuário já existe.");
+        throw new Error("Nome de usuário já existe.");
       }
 
       await db.runAsync(

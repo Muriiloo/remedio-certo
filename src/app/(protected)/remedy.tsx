@@ -7,7 +7,7 @@ import { FlatList, Pressable, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function Remedy() {
-  const { remedy, loadRemedies } = useRemedies()
+  const { remedy, loadRemedies } = useRemedies();
   const [modalVisible, setModalVisible] = useState(false);
 
   useFocusEffect(
@@ -33,7 +33,13 @@ export default function Remedy() {
           >
             <Text className="text-white text-2xl font-bold">+</Text>
           </Pressable>
+          <View className="px-6 pt-6">
+            <Text className="text-3xl font-medium text-gray-900">
+              Lista de remédios
+            </Text>
+          </View>
           <FlatList
+            className="flex-1"
             data={remedy}
             keyExtractor={(item) => String(item.id)}
             contentContainerClassName="p-6 gap-3"

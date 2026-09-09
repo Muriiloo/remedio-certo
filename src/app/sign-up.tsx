@@ -2,6 +2,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useRouter } from "expo-router";
 import { useState } from "react";
 import {
+  Alert,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -43,7 +44,7 @@ export default function SignUp() {
       await signUp(name, password, ageNumber);
       router.replace("/sign-in");
     } catch (error) {
-      console.error("Erro ao cadastrar usuário:", error);
+      Alert.alert("Erro", (error as Error).message);
     }
   }
 
