@@ -7,6 +7,7 @@ export type Remedy = {
   name: string;
   quantity: number;
   time_to_take: string;
+  was_taken: string | null
   person_id: number;
 };
 
@@ -26,7 +27,7 @@ export function RemedyProvider({children} : PropsWithChildren) {
       if (!loggedUser) return;
   
       const result = await db.getAllAsync<Remedy>(
-        "SELECT id, name, quantity, time_to_take FROM remedy WHERE person_id = ? ORDER BY time_to_take",
+        "SELECT id, name, quantity, time_to_take, was_token FROM remedy WHERE person_id = ? ORDER BY time_to_take",
         [loggedUser.id],
       );
       setRemedy(result);

@@ -1,8 +1,10 @@
+import { hoursToSeconds } from "@/helpers/hours-to-seconds";
 import { useAuth } from "@/hooks/useAuth";
 import { useRemedies } from "@/hooks/useRemedies";
 import { Ionicons } from "@expo/vector-icons";
 import { Redirect, useFocusEffect } from "expo-router";
-import { ScrollView, Text, View } from "react-native";
+import { useSQLiteContext } from "expo-sqlite";
+import { Alert, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import NextMedicationCard from "../../components/next-medication-card";
 import "../../global.css";
@@ -12,6 +14,7 @@ const LIMIT = 5;
 export default function Index() {
   const { loggedUser } = useAuth();
   const { remedy, loadRemedies } = useRemedies();
+  const db = useSQLiteContext()
 
   function formatDate(date: Date) {
     return date.toLocaleDateString("pt-BR", {
@@ -20,11 +23,6 @@ export default function Index() {
       month: "long",
       year: "numeric",
     });
-  }
-
-  function hoursToSeconds(hours: string) {
-    const [hh, mm, ss] = hours.split(":").map(Number);
-    return hh * 3600 + mm * 60 + (ss ? ss : 0);
   }
 
   const now = new Date().toLocaleTimeString("pt-BR", {
@@ -44,19 +42,40 @@ export default function Index() {
     );
 
     if (futuros.length > 0) {
-      return futuros.reduce((closest, current) => {
+      const result = futuros.reduce((closest, current) => {
         const difClosest = hoursToSeconds(closest.time_to_take) - nowSeconds;
         const difCurrent = hoursToSeconds(current.time_to_take) - nowSeconds;
         return difCurrent < difClosest ? current : closest;
       });
+
+      return result.was_taken === 'S' ? null : result
     }
 
-    return remedy.reduce((earliest, current) =>
+    const result = remedy.reduce((earliest, current) =>
       hoursToSeconds(current.time_to_take) <
-      hoursToSeconds(earliest.time_to_take)
+        hoursToSeconds(earliest.time_to_take)
         ? current
         : earliest,
     );
+
+
+    return result.was_taken === 'S' ? null : result
+  }
+
+  async function takeMedication(id: number){
+    const hasTakeMedication = remedy.find(item => item.id === id)
+    if(!hasTakeMedication){
+      Alert.alert("Erro", "Medicação não cadastrada.")
+      return
+    }
+
+    if(hasTakeMedication.was_taken === 'S'){
+      Alert.alert("Aviso", "Medicação já foi tomada.")
+      return
+    }
+
+    await db.runAsync(`UPDATE remedy SET was_token = 'S' where id = ?`, [id])
+
   }
 
   if (!loggedUser) {
@@ -110,11 +129,19 @@ export default function Index() {
                         <Text>{item.time_to_take}</Text>
                       </View>
                       <View>
-                        <Ionicons
+                        {item.was_taken === 'S' ? (
+                          <Ionicons
                           name="checkmark-circle"
                           size={50}
                           color="#22c55e"
                         />
+                        ): (
+                          <Ionicons
+                          name="hourglass"
+                          size={50}
+                          color="gray"
+                        />
+                        )}
                       </View>
                     </View>
                   </View>
