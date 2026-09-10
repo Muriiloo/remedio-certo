@@ -3,6 +3,7 @@ import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useSQLiteContext } from "expo-sqlite";
 import { useState } from "react";
 import {
+  Alert,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -29,13 +30,27 @@ export default function RegisterMedicationCard({
   const { loggedUser } = useAuth();
   const db = useSQLiteContext();
 
-  const formattedTime = timeToTake.toString().slice(0, 5); // "08:30"
-  console.log("Formatted Time:", formattedTime); // Log the formatted time
-
   async function handleSave() {
     if (!loggedUser) return;
 
     if (!name.trim() || !quantity.trim() || !timeToTake.trim()) {
+      Alert.alert("Erro", "Por favor, preencha todos os campos.");
+      return;
+    }
+
+    if (name.trim().length < 3) {
+      Alert.alert(
+        "Erro",
+        "O nome do remédio deve ter pelo menos 3 caracteres.",
+      );
+      return;
+    }
+
+    if (timeToTake.length <= 4 || timeToTake.length === 7) {
+      Alert.alert(
+        "Erro",
+        "Por favor, insira um horário válido no formato HH:MM:SS.",
+      );
       return;
     }
 
@@ -120,7 +135,15 @@ export default function RegisterMedicationCard({
                 </Text>
                 <TextInput
                   value={quantity}
-                  onChangeText={setQuantity}
+                  onChangeText={(prev) => {
+                    let cleaned = prev.replace(/[^0-9]/g, "");
+
+                    if (cleaned.length > 2) {
+                      cleaned = cleaned.slice(0, 2);
+                    }
+
+                    setQuantity(cleaned);
+                  }}
                   placeholder="Ex: 1 comprimido"
                   placeholderTextColor="#9ca3af"
                   keyboardType="numeric"
@@ -134,8 +157,31 @@ export default function RegisterMedicationCard({
                 </Text>
                 <TextInput
                   value={timeToTake}
-                  onChangeText={setTimeToTake}
-                  placeholder="Ex: 08:30 ou 'Após o almoço...'"
+                  onChangeText={(prev) => {
+                    let cleaned = prev.replace(/[^0-9]/g, "");
+                    if (cleaned.length > 6) {
+                      cleaned = cleaned.slice(0, 6);
+                    }
+
+                    let hh = cleaned.slice(0, 2);
+                    let mm = cleaned.slice(2, 4);
+                    let ss = cleaned.slice(4, 6);
+
+                    if (hh.length === 2 && parseInt(hh, 10) > 23) hh = "23";
+                    if (mm.length === 2 && parseInt(mm, 10) > 59) mm = "59";
+                    if (ss.length === 2 && parseInt(ss, 10) > 59) ss = "59";
+
+                    let formatted = hh;
+
+                    if (cleaned.length > 2) {
+                      formatted = formatted + ":" + mm;
+                    }
+                    if (cleaned.length > 4) {
+                      formatted = formatted + ":" + ss;
+                    }
+                    setTimeToTake(formatted);
+                  }}
+                  placeholder="Ex: 08:30:00"
                   placeholderTextColor="#9ca3af"
                   keyboardType="numeric"
                   className="border border-gray-300 rounded-xl px-4 py-3.5 text-base text-gray-900"
