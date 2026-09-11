@@ -1,9 +1,11 @@
+import { checkAndResetDailyMedications } from "@/database/check-and-reset-daily-medications";
 import { hoursToSeconds } from "@/helpers/hours-to-seconds";
 import { useAuth } from "@/hooks/useAuth";
 import { useRemedies } from "@/hooks/useRemedies";
 import { Ionicons } from "@expo/vector-icons";
 import { Redirect, useFocusEffect } from "expo-router";
 import { useSQLiteContext } from "expo-sqlite";
+import { useState } from "react";
 import { Alert, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import NextMedicationCard from "../../components/next-medication-card";
@@ -14,7 +16,8 @@ const LIMIT = 5;
 export default function Index() {
   const { loggedUser } = useAuth();
   const { remedy, loadRemedies } = useRemedies();
-  const db = useSQLiteContext()
+  const [loading, setLoading] = useState(false);
+  const db = useSQLiteContext();
 
   function formatDate(date: Date) {
     return date.toLocaleDateString("pt-BR", {
@@ -36,8 +39,10 @@ export default function Index() {
       return null;
     }
 
+    const remedyNotTaken = remedy.filter((r) => r.was_taken !== "S");
+
     // verifico se tem algum remédio futuro, ou seja, segundos positivos
-    const futuros = remedy.filter(
+    const futuros = remedyNotTaken.filter(
       (r) => hoursToSeconds(r.time_to_take) - nowSeconds >= 0,
     );
 
@@ -48,34 +53,45 @@ export default function Index() {
         return difCurrent < difClosest ? current : closest;
       });
 
-      return result.was_taken === 'S' ? null : result
+      return result.was_taken === "S" ? null : result;
     }
 
-    const result = remedy.reduce((earliest, current) =>
-      hoursToSeconds(current.time_to_take) <
-        hoursToSeconds(earliest.time_to_take)
-        ? current
-        : earliest,
-    );
+    if (remedyNotTaken.length === 0) {
+      return null;
+    }
 
+    const result = remedyNotTaken.reduce((earliest, current) => {
+      const secondsCurrent = hoursToSeconds(current.time_to_take);
 
-    return result.was_taken === 'S' ? null : result
+      const secondsEarliest = hoursToSeconds(earliest.time_to_take);
+
+      return secondsCurrent < secondsEarliest ? current : earliest;
+    });
+
+    return result.was_taken === "S" ? null : result;
   }
 
-  async function takeMedication(id: number){
-    const hasTakeMedication = remedy.find(item => item.id === id)
-    if(!hasTakeMedication){
-      Alert.alert("Erro", "Medicação não cadastrada.")
-      return
+  async function takeMedication(id: number) {
+    setLoading(true);
+    const hasTakeMedication = remedy.find((item) => item.id === id);
+    if (!hasTakeMedication) {
+      Alert.alert("Erro", "Medicação não cadastrada.");
+      return;
     }
 
-    if(hasTakeMedication.was_taken === 'S'){
-      Alert.alert("Aviso", "Medicação já foi tomada.")
-      return
+    if (hasTakeMedication.was_taken === "S") {
+      Alert.alert("Aviso", "Medicação já foi tomada.");
+      return;
     }
 
-    await db.runAsync(`UPDATE remedy SET was_token = 'S' where id = ?`, [id])
-
+    try {
+      await db.runAsync(`UPDATE remedy SET was_taken = 'S' where id = ?`, [id]);
+      await loadRemedies();
+    } catch (error) {
+      Alert.alert("Erro", "Não foi possível atualizar a medicação.");
+    } finally {
+      setLoading(false);
+    }
   }
 
   if (!loggedUser) {
@@ -83,7 +99,10 @@ export default function Index() {
   }
 
   useFocusEffect(() => {
-    loadRemedies();
+    (async () => {
+      await checkAndResetDailyMedications(db);
+      await loadRemedies();
+    })();
   });
 
   return (
@@ -101,7 +120,11 @@ export default function Index() {
       </View>
       <View className="flex-1 bg-[#ebe7e0] rounded-t-3xl">
         <ScrollView>
-          <NextMedicationCard onNearestMedication={nearestMedication} />
+          <NextMedicationCard
+            loading={loading}
+            onNearestMedication={nearestMedication}
+            onTakeMedication={takeMedication}
+          />
           <View className="flex gap-4 m-8 bg-white py-6 px-4 rounded-xl">
             <Text className="text-black font-semibold text-2xl">
               Rotina de Hoje
@@ -129,18 +152,14 @@ export default function Index() {
                         <Text>{item.time_to_take}</Text>
                       </View>
                       <View>
-                        {item.was_taken === 'S' ? (
+                        {item.was_taken === "S" ? (
                           <Ionicons
-                          name="checkmark-circle"
-                          size={50}
-                          color="#22c55e"
-                        />
-                        ): (
-                          <Ionicons
-                          name="hourglass"
-                          size={50}
-                          color="gray"
-                        />
+                            name="checkmark-circle"
+                            size={50}
+                            color="#22c55e"
+                          />
+                        ) : (
+                          <Ionicons name="hourglass" size={50} color="gray" />
                         )}
                       </View>
                     </View>

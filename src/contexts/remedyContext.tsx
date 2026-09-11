@@ -7,35 +7,35 @@ export type Remedy = {
   name: string;
   quantity: number;
   time_to_take: string;
-  was_taken: string | null
+  was_taken: string | null;
   person_id: number;
 };
 
 type RemedyState = {
-  remedy: Remedy[]
-  loadRemedies: () => Promise<void>
-}
+  remedy: Remedy[];
+  loadRemedies: () => Promise<void>;
+};
 
-export const RemedyContext = createContext<RemedyState>({} as RemedyState)
+export const RemedyContext = createContext<RemedyState>({} as RemedyState);
 
-export function RemedyProvider({children} : PropsWithChildren) {
+export function RemedyProvider({ children }: PropsWithChildren) {
   const [remedy, setRemedy] = useState<Remedy[]>([]);
   const { loggedUser } = useAuth();
-  const db = useSQLiteContext();  
+  const db = useSQLiteContext();
 
   const loadRemedies = useCallback(async () => {
-      if (!loggedUser) return;
-  
-      const result = await db.getAllAsync<Remedy>(
-        "SELECT id, name, quantity, time_to_take, was_token FROM remedy WHERE person_id = ? ORDER BY time_to_take",
-        [loggedUser.id],
-      );
-      setRemedy(result);
-    }, [db, loggedUser]);
+    if (!loggedUser) return;
+
+    const result = await db.getAllAsync<Remedy>(
+      "SELECT id, name, quantity, time_to_take, was_taken FROM remedy WHERE person_id = ? ORDER BY time_to_take",
+      [loggedUser.id],
+    );
+    setRemedy(result);
+  }, [db, loggedUser]);
 
   return (
-    <RemedyContext.Provider value={{ remedy, loadRemedies}}>
+    <RemedyContext.Provider value={{ remedy, loadRemedies }}>
       {children}
     </RemedyContext.Provider>
-  )
+  );
 }

@@ -4,17 +4,20 @@ import { Pressable, Text, View } from "react-native";
 
 interface NextMedicationCardProps {
   onNearestMedication: () => Remedy | null;
+  onTakeMedication: (id: number) => Promise<void>;
+  loading: boolean;
 }
 
 const NextMedicationCard = ({
   onNearestMedication,
+  onTakeMedication,
+  loading,
 }: NextMedicationCardProps) => {
   const nearestMedication = onNearestMedication();
 
-
   return (
     <>
-      {nearestMedication && (
+      {nearestMedication && nearestMedication.was_taken !== "S" && (
         <View className="flex gap-4 mx-8 my-4 bg-white py-6 px-4 rounded-xl">
           <View className="flex-row items-center justify-between gap-6 ">
             <Text className="text-black font-medium text-2xl">
@@ -40,11 +43,14 @@ const NextMedicationCard = ({
                 </Text>
               </View>
             </View>
-
           </View>
-          <Pressable className="bg-emerald-500 p-4 rounded-full">
+          <Pressable
+            className="bg-emerald-500 p-4 rounded-full"
+            disabled={loading}
+            onPress={() => onTakeMedication(nearestMedication.id)}
+          >
             <Text className="text-white text-center font-bold text-xl">
-              JÁ TOMEI!
+              {loading ? "Carregando..." : "JÁ TOMEI!"}
             </Text>
           </Pressable>
         </View>
