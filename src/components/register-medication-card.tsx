@@ -1,4 +1,5 @@
 import { useAuth } from "@/hooks/useAuth";
+import { scheduleMedicationNotification } from "@/services/notifications";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useSQLiteContext } from "expo-sqlite";
 import { useState } from "react";
@@ -55,11 +56,17 @@ export default function RegisterMedicationCard({
     }
 
     try {
-      await db.runAsync(
+      const result = await db.runAsync(
         "INSERT INTO remedy (name, quantity, time_to_take, person_id) VALUES (?, ?, ?, ?)",
         [name, quantity, timeToTake, loggedUser.id],
       );
       await onRemedyCreated();
+      await scheduleMedicationNotification({
+        id: result.lastInsertRowId,
+        name,
+        quantity: Number(quantity),
+        time_to_take: timeToTake
+      })
       onClose();
       setName("");
       setQuantity("");
