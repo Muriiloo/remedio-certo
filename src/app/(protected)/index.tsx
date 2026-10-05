@@ -1,23 +1,36 @@
-import { checkAndResetDailyMedications } from "@/database/check-and-reset-daily-medications";
+import { isLowStock } from "@/database/remedies";
 import { hoursToSeconds } from "@/helpers/hours-to-seconds";
+import { nowInSeconds, type Dose } from "@/helpers/schedule";
 import { useAuth } from "@/hooks/useAuth";
 import { useRemedies } from "@/hooks/useRemedies";
+import { sendSms, sendWhatsApp } from "@/services/emergency-contact";
+import { openNearbyPharmacies } from "@/services/pharmacies";
 import { Ionicons } from "@expo/vector-icons";
-import { Redirect, useFocusEffect } from "expo-router";
-import { useSQLiteContext } from "expo-sqlite";
-import { useState } from "react";
-import { Alert, ScrollView, Text, View } from "react-native";
+import { Redirect, useFocusEffect, useRouter } from "expo-router";
+import { useCallback, useState } from "react";
+import { Alert, Pressable, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import NextMedicationCard from "../../components/next-medication-card";
 import "../../global.css";
 
 const LIMIT = 5;
 
+// atraso a partir do qual o app sugere avisar o contato de emergência
+const LATE_ALERT_SECONDS = 30 * 60;
+
 export default function Index() {
   const { loggedUser } = useAuth();
-  const { remedy, loadRemedies } = useRemedies();
+  const { remedy, doses, loadRemedies, takeDose } = useRemedies();
   const [loading, setLoading] = useState(false);
-  const db = useSQLiteContext();
+  const [loadingPharmacies, setLoadingPharmacies] = useState(false);
+  const [showAll, setShowAll] = useState(false);
+  const router = useRouter();
+
+  useFocusEffect(
+    useCallback(() => {
+      loadRemedies();
+    }, [loadRemedies]),
+  );
 
   function formatDate(date: Date) {
     return date.toLocaleDateString("pt-BR", {
@@ -28,65 +41,30 @@ export default function Index() {
     });
   }
 
-  const now = new Date().toLocaleTimeString("pt-BR", {
-    timeZone: "America/Sao_Paulo",
-    hour12: false,
-  });
-  const nowSeconds = hoursToSeconds(now);
+  const nowSeconds = nowInSeconds();
 
-  function nearestMedication() {
-    if (!remedy || remedy.length === 0) {
-      return null;
-    }
-
-    const remedyNotTaken = remedy.filter((r) => r.was_taken !== "S");
-
-    // verifico se tem algum remédio futuro, ou seja, segundos positivos
-    const futuros = remedyNotTaken.filter(
-      (r) => hoursToSeconds(r.time_to_take) - nowSeconds >= 0,
-    );
-
-    if (futuros.length > 0) {
-      const result = futuros.reduce((closest, current) => {
-        const difClosest = hoursToSeconds(closest.time_to_take) - nowSeconds;
-        const difCurrent = hoursToSeconds(current.time_to_take) - nowSeconds;
-        return difCurrent < difClosest ? current : closest;
-      });
-
-      return result.was_taken === "S" ? null : result;
-    }
-
-    if (remedyNotTaken.length === 0) {
-      return null;
-    }
-
-    const result = remedyNotTaken.reduce((earliest, current) => {
-      const secondsCurrent = hoursToSeconds(current.time_to_take);
-
-      const secondsEarliest = hoursToSeconds(earliest.time_to_take);
-
-      return secondsCurrent < secondsEarliest ? current : earliest;
-    });
-
-    return result.was_taken === "S" ? null : result;
+  function isLate(dose: Dose) {
+    return !dose.taken && hoursToSeconds(dose.time) < nowSeconds;
   }
 
-  async function takeMedication(id: number) {
-    setLoading(true);
-    const hasTakeMedication = remedy.find((item) => item.id === id);
-    if (!hasTakeMedication) {
-      Alert.alert("Erro", "Medicação não cadastrada.");
-      return;
-    }
+  // a próxima dose futura; se não houver, a mais antiga ainda não tomada
+  const pending = doses.filter((dose) => !dose.taken);
+  const nextDose =
+    pending.find((dose) => hoursToSeconds(dose.time) >= nowSeconds) ??
+    pending[0] ??
+    null;
 
-    if (hasTakeMedication.was_taken === "S") {
-      Alert.alert("Aviso", "Medicação já foi tomada.");
-      return;
-    }
+  const veryLate = pending.filter(
+    (dose) => nowSeconds - hoursToSeconds(dose.time) >= LATE_ALERT_SECONDS,
+  );
+  const lowStock = remedy.filter(isLowStock);
+  const visibleDoses = showAll ? doses : doses.slice(0, LIMIT);
+
+  async function takeMedication(dose: Dose) {
+    setLoading(true);
 
     try {
-      await db.runAsync(`UPDATE remedy SET was_taken = 'S' where id = ?`, [id]);
-      await loadRemedies();
+      await takeDose(dose);
     } catch (error) {
       Alert.alert("Erro", "Não foi possível atualizar a medicação.");
     } finally {
@@ -94,16 +72,23 @@ export default function Index() {
     }
   }
 
+  async function seeNearbyPharmacies() {
+    setLoadingPharmacies(true);
+    try {
+      await openNearbyPharmacies();
+    } finally {
+      setLoadingPharmacies(false);
+    }
+  }
+
   if (!loggedUser) {
     return <Redirect href="/sign-in" />;
   }
 
-  useFocusEffect(() => {
-    (async () => {
-      await checkAndResetDailyMedications(db);
-      await loadRemedies();
-    })();
-  });
+  const emergencyPhone = loggedUser.emergency_phone;
+  const emergencyMessage = `Olá! Aqui é ${loggedUser.name}. Ainda não tomei: ${veryLate
+    .map((dose) => `${dose.name} (${dose.time})`)
+    .join(", ")}.`;
 
   return (
     <SafeAreaView edges={["top"]} className="flex-1 bg-[#038bbb]">
@@ -115,58 +100,138 @@ export default function Index() {
             </Text>
             <Text className="text-white text-lg">{formatDate(new Date())}</Text>
           </View>
-          <Ionicons name="person-circle-outline" size={60} color="white" />
+          <Pressable onPress={() => router.navigate("/profile")}>
+            <Ionicons name="person-circle-outline" size={60} color="white" />
+          </Pressable>
         </View>
       </View>
       <View className="flex-1 bg-[#ebe7e0] rounded-t-3xl">
         <ScrollView>
           <NextMedicationCard
+            dose={nextDose}
+            late={nextDose !== null && isLate(nextDose)}
             loading={loading}
-            onNearestMedication={nearestMedication}
             onTakeMedication={takeMedication}
           />
+          {veryLate.length > 0 && emergencyPhone && (
+            <View className="flex gap-3 mx-8 mt-4 bg-white py-6 px-4 rounded-xl border border-red-300">
+              <View className="flex-row items-center gap-2">
+                <Ionicons name="alert-circle" size={28} color="#dc2626" />
+                <Text className="text-red-600 font-semibold text-2xl">
+                  Dose atrasada
+                </Text>
+              </View>
+              <Text className="text-lg">
+                {veryLate
+                  .map((dose) => `${dose.name} (${dose.time})`)
+                  .join(", ")}
+                . Quer avisar {loggedUser.emergency_name ?? "seu contato"}?
+              </Text>
+              <View className="flex-row gap-3">
+                <Pressable
+                  className="flex-1 bg-emerald-500 p-3 rounded-full"
+                  onPress={() => sendWhatsApp(emergencyPhone, emergencyMessage)}
+                >
+                  <Text className="text-white text-center font-bold text-lg">
+                    WhatsApp
+                  </Text>
+                </Pressable>
+                <Pressable
+                  className="flex-1 bg-[#038bbb] p-3 rounded-full"
+                  onPress={() => sendSms(emergencyPhone, emergencyMessage)}
+                >
+                  <Text className="text-white text-center font-bold text-lg">
+                    SMS
+                  </Text>
+                </Pressable>
+              </View>
+            </View>
+          )}
+          {lowStock.length > 0 && (
+            <View className="flex gap-2 mx-8 mt-4 bg-white py-6 px-4 rounded-xl border border-amber-300">
+              <View className="flex-row items-center gap-2">
+                <Ionicons name="warning" size={28} color="#d97706" />
+                <Text className="text-amber-600 font-semibold text-2xl">
+                  Estoque baixo
+                </Text>
+              </View>
+              {lowStock.map((item) => (
+                <Text key={item.id} className="text-lg">
+                  {item.name}: restam {item.stock} unidade(s)
+                </Text>
+              ))}
+            </View>
+          )}
+          <Pressable
+            className="flex-row items-center justify-center gap-2 mx-8 mt-4 bg-[#038bbb] p-4 rounded-full"
+            disabled={loadingPharmacies}
+            onPress={seeNearbyPharmacies}
+          >
+            <Ionicons name="location" size={24} color="white" />
+            <Text className="text-white text-center font-bold text-xl">
+              {loadingPharmacies
+                ? "Carregando..."
+                : "Ver farmácias perto de mim"}
+            </Text>
+          </Pressable>
           <View className="flex gap-4 m-8 bg-white py-6 px-4 rounded-xl">
             <Text className="text-black font-semibold text-2xl">
               Rotina de Hoje
             </Text>
             <View className="border-b border-red" />
-            <ScrollView>
-              {remedy?.length === 0 ? (
-                <View>
-                  <Text className="text-gray-500 text-xl text-center">
-                    Nenhum remédio cadastrado.
-                  </Text>
-                </View>
-              ) : (
-                remedy.slice(0, LIMIT).map((item) => (
-                  <View
-                    key={item.id}
-                    className="flex-row items-center gap-4 flex-1"
-                  >
-                    <Ionicons name="medical" size={60} color="#038bbb" />
-                    <View className="flex-row flex-1 justify-between">
-                      <View>
-                        <Text className="text-2xl font-medium">
-                          {item.name}
-                        </Text>
-                        <Text>{item.time_to_take}</Text>
-                      </View>
-                      <View>
-                        {item.was_taken === "S" ? (
-                          <Ionicons
-                            name="checkmark-circle"
-                            size={50}
-                            color="#22c55e"
-                          />
-                        ) : (
-                          <Ionicons name="hourglass" size={50} color="gray" />
-                        )}
-                      </View>
+            {doses.length === 0 ? (
+              <View>
+                <Text className="text-gray-500 text-xl text-center">
+                  Nenhum remédio para hoje.
+                </Text>
+              </View>
+            ) : (
+              visibleDoses.map((item) => (
+                <View
+                  key={`${item.remedyId}-${item.time}`}
+                  className="flex-row items-center gap-4 flex-1"
+                >
+                  <Ionicons name="medical" size={60} color="#038bbb" />
+                  <View className="flex-row flex-1 justify-between">
+                    <View>
+                      <Text className="text-2xl font-medium">{item.name}</Text>
+                      <Text
+                        className={
+                          isLate(item) ? "text-red-600 font-medium" : ""
+                        }
+                      >
+                        {item.time}
+                        {isLate(item) && " - Atrasado"}
+                      </Text>
+                    </View>
+                    <View>
+                      {item.taken ? (
+                        <Ionicons
+                          name="checkmark-circle"
+                          size={50}
+                          color="#22c55e"
+                        />
+                      ) : isLate(item) ? (
+                        <Ionicons
+                          name="alert-circle"
+                          size={50}
+                          color="#dc2626"
+                        />
+                      ) : (
+                        <Ionicons name="hourglass" size={50} color="gray" />
+                      )}
                     </View>
                   </View>
-                ))
-              )}
-            </ScrollView>
+                </View>
+              ))
+            )}
+            {doses.length > LIMIT && (
+              <Pressable onPress={() => setShowAll(!showAll)}>
+                <Text className="text-[#038bbb] text-center font-semibold text-lg">
+                  {showAll ? "Ver menos" : `Ver todos (${doses.length})`}
+                </Text>
+              </Pressable>
+            )}
           </View>
         </ScrollView>
       </View>
