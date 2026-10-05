@@ -1,4 +1,7 @@
 import RegisterMedicationCard from "@/components/register-medication-card";
+import RestockCard from "@/components/restock-card";
+import { isLowStock, type Remedy as RemedyItem } from "@/database/remedies";
+import { formatDateBR, formatDays } from "@/helpers/schedule";
 import { useRemedies } from "@/hooks/useRemedies";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useFocusEffect } from "expo-router";
@@ -9,6 +12,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 export default function Remedy() {
   const { remedy, loadRemedies } = useRemedies();
   const [modalVisible, setModalVisible] = useState(false);
+  const [restocking, setRestocking] = useState<RemedyItem | null>(null);
 
   useFocusEffect(
     useCallback(() => {
@@ -57,17 +61,35 @@ export default function Remedy() {
                   <Text className="text-lg font-medium text-gray-900">
                     {item.name}
                   </Text>
-                  {item.quantity && (
-                    <Text className="text-sm text-gray-500">
-                      {item.quantity}
+                  <Text className="text-sm text-gray-500">
+                    {item.quantity} unidade(s) por dose
+                  </Text>
+                  <Text className="text-sm font-medium text-gray-700">
+                    {item.times.join(" · ")}
+                  </Text>
+                  <Text className="text-sm text-gray-500">
+                    {formatDays(item.days)}
+                    {item.end_date && ` · até ${formatDateBR(item.end_date)}`}
+                  </Text>
+                  {item.stock !== null && (
+                    <Text
+                      className={`text-sm font-medium ${
+                        isLowStock(item) ? "text-red-600" : "text-gray-700"
+                      }`}
+                    >
+                      Estoque: {item.stock} unidade(s)
+                      {isLowStock(item) && " - acabando"}
                     </Text>
                   )}
                 </View>
-                {item.time_to_take && (
-                  <Text className="text-sm font-medium text-gray-700">
-                    {item.time_to_take}
+                <Pressable
+                  className="px-3 py-2 rounded-full border border-[#038bbb] active:opacity-70"
+                  onPress={() => setRestocking(item)}
+                >
+                  <Text className="text-sm font-medium text-[#038bbb]">
+                    Repor
                   </Text>
-                )}
+                </Pressable>
               </View>
             )}
           />
@@ -77,6 +99,11 @@ export default function Remedy() {
         onRemedyCreated={loadRemedies}
         onOpen={modalVisible}
         onClose={() => setModalVisible(false)}
+      />
+      <RestockCard
+        remedy={restocking}
+        onRestocked={loadRemedies}
+        onClose={() => setRestocking(null)}
       />
     </>
   );

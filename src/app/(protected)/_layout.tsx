@@ -21,6 +21,14 @@ export default function ProtectedLayout() {
         <NativeTabs.Trigger.Label>Remédios</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon sf="pills.fill" md="medication" />
       </NativeTabs.Trigger>
+      <NativeTabs.Trigger name="history">
+        <NativeTabs.Trigger.Label>Histórico</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Icon sf="clock.fill" md="history" />
+      </NativeTabs.Trigger>
+      <NativeTabs.Trigger name="profile">
+        <NativeTabs.Trigger.Label>Perfil</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Icon sf="person.fill" md="person" />
+      </NativeTabs.Trigger>
     </NativeTabs>
     </RemedyProvider>
   );

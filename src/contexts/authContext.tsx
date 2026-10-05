@@ -5,9 +5,12 @@ type User = {
   id: number;
   name: string;
   age: number;
+  emergency_name: string | null;
+  emergency_phone: string | null;
 };
 
 type AuthState = {
+  updateEmergencyContact: (name: string, phone: string) => Promise<void>;
   isLoggedIn: boolean;
   isLoading: boolean;
   signIn: (name: string, password: string) => Promise<void>;
@@ -28,13 +31,8 @@ export function AuthProvider({ children }: PropsWithChildren) {
     setIsLoading(true);
 
     try {
-      const user = await db.getFirstAsync<{
-        id: number;
-        name: string;
-        age: number;
-        password: string;
-      }>(
-        "SELECT id, name, age, password FROM person WHERE name = ? AND password = ?",
+      const user = await db.getFirstAsync<User>(
+        "SELECT id, name, age, emergency_name, emergency_phone FROM person WHERE name = ? AND password = ?",
         [name, password],
       );
 
@@ -43,7 +41,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
       }
 
       setIsLoggedIn(true);
-      setLoggedUser({ id: user.id, name: user.name, age: user.age });
+      setLoggedUser(user);
     } finally {
       setIsLoading(false);
     }
@@ -52,6 +50,19 @@ export function AuthProvider({ children }: PropsWithChildren) {
   function signOut() {
     setIsLoggedIn(false);
     setLoggedUser(null);
+  }
+
+  async function updateEmergencyContact(name: string, phone: string) {
+    if (!loggedUser) return;
+
+    const emergency_name = name.trim() || null;
+    const emergency_phone = phone.trim() || null;
+
+    await db.runAsync(
+      "UPDATE person SET emergency_name = ?, emergency_phone = ? WHERE id = ?",
+      [emergency_name, emergency_phone, loggedUser.id],
+    );
+    setLoggedUser({ ...loggedUser, emergency_name, emergency_phone });
   }
 
   async function signUp(name: string, password: string, age: number) {
@@ -78,7 +89,15 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
   return (
     <AuthContext.Provider
-      value={{ signIn, loggedUser, isLoggedIn, isLoading, signOut, signUp }}
+      value={{
+        signIn,
+        loggedUser,
+        isLoggedIn,
+        isLoading,
+        signOut,
+        signUp,
+        updateEmergencyContact,
+      }}
     >
       {children}
     </AuthContext.Provider>

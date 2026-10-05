@@ -1,23 +1,23 @@
-import type { Remedy } from "@/contexts/remedyContext";
+import type { Dose } from "@/helpers/schedule";
 import { Ionicons } from "@expo/vector-icons";
 import { Pressable, Text, View } from "react-native";
 
 interface NextMedicationCardProps {
-  onNearestMedication: () => Remedy | null;
-  onTakeMedication: (id: number) => Promise<void>;
+  dose: Dose | null;
+  late: boolean;
+  onTakeMedication: (dose: Dose) => Promise<void>;
   loading: boolean;
 }
 
 const NextMedicationCard = ({
-  onNearestMedication,
+  dose,
+  late,
   onTakeMedication,
   loading,
 }: NextMedicationCardProps) => {
-  const nearestMedication = onNearestMedication();
-
   return (
     <>
-      {nearestMedication && nearestMedication.was_taken !== "S" && (
+      {dose && (
         <View className="flex gap-4 mx-8 my-4 bg-white py-6 px-4 rounded-xl">
           <View className="flex-row items-center justify-between gap-6 ">
             <Text className="text-black font-medium text-2xl">
@@ -30,24 +30,27 @@ const NextMedicationCard = ({
 
             <View className="flex-1 flex-row justify-between">
               <View>
-                <Text className="text-2xl font-medium">
-                  {nearestMedication.name}
-                </Text>
+                <Text className="text-2xl font-medium">{dose.name}</Text>
                 <Text className="font-medium">
-                  {nearestMedication.quantity} comprimido (s)
+                  {dose.quantity} comprimido (s)
                 </Text>
               </View>
-              <View>
-                <Text className="font-semibold text-2xl">
-                  {nearestMedication.time_to_take}
+              <View className="items-end">
+                <Text
+                  className={`font-semibold text-2xl ${late ? "text-red-600" : ""}`}
+                >
+                  {dose.time}
                 </Text>
+                {late && (
+                  <Text className="text-red-600 font-medium">Atrasado</Text>
+                )}
               </View>
             </View>
           </View>
           <Pressable
             className="bg-emerald-500 p-4 rounded-full"
             disabled={loading}
-            onPress={() => onTakeMedication(nearestMedication.id)}
+            onPress={() => onTakeMedication(dose)}
           >
             <Text className="text-white text-center font-bold text-xl">
               {loading ? "Carregando..." : "JÁ TOMEI!"}
