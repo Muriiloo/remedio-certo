@@ -30,16 +30,26 @@ Além disso, o aplicativo busca proporcionar uma experiência simples e acessív
 
 ## ✨ Funcionalidades
 
-Entre as principais funcionalidades planejadas para o aplicativo estão:
+Entre as principais funcionalidades do aplicativo estão:
 
-* 💊 Cadastro de medicamentos
+* 💊 Cadastro, edição e exclusão de medicamentos
 * ⏰ Definição dos horários para tomar cada medicamento
-* 🔔 Lembretes para os horários dos medicamentos
-* 📋 Visualização dos medicamentos cadastrados
-* 🗑️ Exclusão de medicamentos
-* ✏️ Edição das informações dos medicamentos
-* 👨‍👩‍👦 Possibilidade de utilização por familiares e cuidadores
+* 🔔 Lembretes (notificações) nos horários dos medicamentos, com ações diretas na notificação
+* ✅ Rotina do dia com a próxima dose e indicação de doses atrasadas
+* 📦 Controle de estoque, com aviso de estoque baixo
+* 🕘 Histórico de doses dos últimos 7 dias, com percentual de adesão
+* 🚨 Aviso ao contato de emergência (WhatsApp ou SMS) quando uma dose atrasa muito
+* 📍 Farmácias próximas, com distância, endereço, horário, rota e ligação (veja abaixo)
 * 👴 Interface simples e intuitiva, pensando principalmente no público idoso
+
+### 📍 Farmácias próximas
+
+A tela de farmácias usa a localização do aparelho e consome a API **[Nominatim](https://nominatim.org/)** do **OpenStreetMap** para buscar farmácias em até 3 km, ordenadas por distância.
+
+* Não exige chave de API nem cadastro.
+* A requisição é identificada com um `User-Agent` próprio (exigência do Nominatim) e o uso respeita o limite de 1 requisição por segundo.
+* Endereço, horário e telefone aparecem apenas quando estão preenchidos no OpenStreetMap, então a cobertura varia conforme a região.
+* Dados © colaboradores do [OpenStreetMap](https://www.openstreetmap.org/copyright).
 
 ---
 
@@ -49,7 +59,13 @@ O projeto está sendo desenvolvido utilizando:
 
 * **React Native** — desenvolvimento da aplicação mobile
 * **Expo** — ambiente e ferramentas para desenvolvimento com React Native
-* **JavaScript / TypeScript** — linguagem de programação
+* **TypeScript** — linguagem de programação
+* **Expo Router** — navegação entre telas
+* **NativeWind** — estilização com classes utilitárias
+* **Expo SQLite** — armazenamento local dos dados
+* **Expo Notifications** — lembretes nos horários dos medicamentos
+* **Expo Location** — localização para buscar farmácias próximas
+* **API Nominatim (OpenStreetMap)** — busca de farmácias próximas
 * **Git e GitHub** — versionamento e gerenciamento do código
 
 ---
